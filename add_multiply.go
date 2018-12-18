@@ -85,7 +85,7 @@ func status(d int) {
 	var max float64 = 0
 	var ind int = 0
 	var wrongSum float64 = 0
-	var last100Sum float64 = 0
+	last100Sum = 0
 	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
 		if max < nodes[len(nodes)-1][p] {
 			max = nodes[len(nodes)-1][p]
@@ -131,15 +131,16 @@ func status(d int) {
 		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(last100Sum/100))
 		if len(last100) < 100 {
 			last100 = append(last100, (nodes[len(nodes)-1][ind]-wrongSum)*100)
+			confidenceSum += 100
 		} else {
 			for i := 1; i < len(last100)-1; i++ {
 				last100[i] = last100[i+1]
 			}
 			last100[99] = (nodes[len(nodes)-1][ind] - wrongSum) * 100
+			confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 		}
 	}
 	fmt.Print("	Data: ", dataset[d][0], "\n")
-	confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 
 }
 
@@ -182,7 +183,7 @@ func backward(lr float64) {
 	}
 }
 
-var layers = []int{3, 2, 2} //------------------------------------------------------ layout (!)
+var layers = []int{3, 8, 2} //------------------------------------------------------ layout (!)
 var weights = [][][]float64{{{}}}
 var nodes = [][]float64{{}}
 var errors = [][]float64{{}}
@@ -193,6 +194,7 @@ var confidenceSum float64 = 0
 var successSum float64 = 0
 
 var last100 = []float64{}
+var last100Sum float64 = 0
 
 func strToArray(str string) []float64 {
 
@@ -206,7 +208,7 @@ func strToArray(str string) []float64 {
 }
 
 func createData(n int) {
-	fmt.Println("creating ramdom datasets...")
+	fmt.Println("creating ramdom datasets... (", n, ")")
 	dataset = [][][]float64{{{}}}
 
 	for l := 0; l < n; l++ {
@@ -214,8 +216,8 @@ func createData(n int) {
 		rand.Seed(time.Now().UTC().UnixNano() + int64(l))
 		var o = []float64{}
 
-		var a float64 = float64(rand.Intn(20))
-		var b float64 = float64(rand.Intn(20))
+		var a float64 = float64(rand.Intn(32))
+		var b float64 = float64(rand.Intn(32))
 		var c float64 = 0
 
 		if l%2 == 0 {
@@ -243,7 +245,7 @@ func createData(n int) {
 }
 
 func learn(lr float64) {
-	createData(100000) //------------------------------------------------------------------- datasets (learning)
+	createData(1000000) //------------------------------------------------------------------- datasets (learning)
 
 	fmt.Println("learning...")
 
@@ -251,6 +253,9 @@ func learn(lr float64) {
 		forward(d)
 		status(d)
 		backward(lr)
+		if last100Sum/100 > 95 {
+			break
+		}
 	}
 
 	fmt.Println("\nlearning session (", len(dataset), ") successful\n")
@@ -275,5 +280,5 @@ func main() {
 		forward(p)
 		status(p)
 	}
-	fmt.Println("\nOverall confidence: 	", confidenceSum/float64(amt), "%	 Success Rate:	", successSum/float64(amt)*100, "%		Score:	", int(confidenceSum/float64(amt)*(successSum/float64(amt)*100)), "\n")
+	fmt.Println("\nOverall confidence: 	", confidenceSum/float64(amt), "%	 Success rate:	", successSum/float64(amt)*100, "%		Score:	", int(confidenceSum/float64(amt)*(successSum/float64(amt)*100)), "\n")
 }
