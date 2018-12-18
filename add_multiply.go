@@ -39,7 +39,7 @@ func randomize() {
 	}
 }
 
-func CALCerrors(d int) {
+func calcErrors(d int) {
 	errors = [][]float64{{}}
 	for l := 0; l < len(layers)-1; l++ {
 		errors = append(errors, []float64{})
@@ -84,8 +84,8 @@ func status(d int) {
 
 	var max float64 = 0
 	var ind int = 0
-	var wrong_sum float64 = 0
-	var last100_sum float64 = 0
+	var wrongSum float64 = 0
+	var last100Sum float64 = 0
 	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
 		if max < nodes[len(nodes)-1][p] {
 			max = nodes[len(nodes)-1][p]
@@ -101,24 +101,24 @@ func status(d int) {
 	}
 	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
 		if p != ind {
-			wrong_sum += nodes[len(nodes)-1][p]
+			wrongSum += nodes[len(nodes)-1][p]
 		}
 	}
-	wrong_sum /= float64(len(nodes[len(nodes)-1]) - 1)
+	wrongSum /= float64(len(nodes[len(nodes)-1]) - 1)
 	for p := 0; p < len(last100); p++ {
-		last100_sum += last100[p]
+		last100Sum += last100[p]
 	}
 
 	if ind == indc {
 		fmt.Print(d, " / ", len(dataset)-1, ": " /*dataset[d][0], "		-> ",*/, predictions[ind], "	(correct!)" /* nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
 
-		success_sum += 1
+		successSum++
 	} else {
 
 		fmt.Print(d, " / ", len(dataset)-1, ": " /* dataset[d][0], "		-> ",*/, predictions[ind], "	(wrong!)" /*	 nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
 	}
 	if sum > 100 {
-		fmt.Println(" ", 100, "%	", int(last100_sum/100))
+		fmt.Print(" ", 100, "%	", int(last100Sum/100))
 		if len(last100) < 100 {
 			last100 = append(last100, 100)
 		} else {
@@ -128,17 +128,18 @@ func status(d int) {
 			last100[99] = 100
 		}
 	} else {
-		fmt.Println(" ", int((nodes[len(nodes)-1][ind]-wrong_sum)*100), "%	", int(last100_sum/100))
+		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(last100Sum/100))
 		if len(last100) < 100 {
-			last100 = append(last100, (nodes[len(nodes)-1][ind]-wrong_sum)*100)
+			last100 = append(last100, (nodes[len(nodes)-1][ind]-wrongSum)*100)
 		} else {
 			for i := 1; i < len(last100)-1; i++ {
 				last100[i] = last100[i+1]
 			}
-			last100[99] = (nodes[len(nodes)-1][ind] - wrong_sum) * 100
+			last100[99] = (nodes[len(nodes)-1][ind] - wrongSum) * 100
 		}
 	}
-	confidence_sum += (nodes[len(nodes)-1][ind] - wrong_sum) * 100
+	fmt.Print("	Data: ", dataset[d][0], "\n")
+	confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 
 }
 
@@ -166,7 +167,7 @@ func forward(d int) {
 		}
 	}
 
-	CALCerrors(d)
+	calcErrors(d)
 
 }
 
@@ -188,8 +189,8 @@ var errors = [][]float64{{}}
 var dataset = [][][]float64{{{}}}
 var predictions = [4]string{} //------------------------------------------------------------ how many logical outputs
 
-var confidence_sum float64 = 0
-var success_sum float64 = 0
+var confidenceSum float64 = 0
+var successSum float64 = 0
 
 var last100 = []float64{}
 
@@ -268,11 +269,11 @@ func main() {
 	var amt int = 100
 
 	createData(amt) //------------------------------------------------------------------------ dataset (show)
-	confidence_sum = 0
-	success_sum = 0
+	confidenceSum = 0
+	successSum = 0
 	for p := 0; p < amt; p++ {
 		forward(p)
 		status(p)
 	}
-	fmt.Println("\nOverall confidence: 	", confidence_sum/float64(amt), "%	 Success Rate:	", success_sum/float64(amt)*100, "%		Score:	", int(confidence_sum/float64(amt)*(success_sum/float64(amt)*100)), "\n")
+	fmt.Println("\nOverall confidence: 	", confidenceSum/float64(amt), "%	 Success Rate:	", successSum/float64(amt)*100, "%		Score:	", int(confidenceSum/float64(amt)*(successSum/float64(amt)*100)), "\n")
 }
