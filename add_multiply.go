@@ -125,22 +125,28 @@ func status(d int) {
 		fmt.Print(" ", 100, "%	", int(lastCoupleSum/float64(len(lastCouple))))
 		if len(lastCouple) < lastCoupleLength {
 			lastCouple = append(lastCouple, 100)
+			lastCoupleRight = append(lastCoupleRight, ind == indc)
 		} else {
 			for i := 1; i < len(lastCouple)-1; i++ {
 				lastCouple[i] = lastCouple[i+1]
+				lastCoupleRight[i] = lastCoupleRight[i+1]
 			}
 			lastCouple[len(lastCouple)-1] = 100
+			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
 		}
 	} else {
 		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(lastCoupleSum/float64(len(lastCouple))))
 		if len(lastCouple) < lastCoupleLength {
 			lastCouple = append(lastCouple, (nodes[len(nodes)-1][ind]-wrongSum)*100)
+			lastCoupleRight = append(lastCoupleRight, ind == indc)
 			confidenceSum += 100
 		} else {
 			for i := 1; i < len(lastCouple)-1; i++ {
 				lastCouple[i] = lastCouple[i+1]
+				lastCoupleRight[i] = lastCoupleRight[i+1]
 			}
 			lastCouple[len(lastCouple)-1] = (nodes[len(nodes)-1][ind] - wrongSum) * 100
+			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
 			confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 		}
 	}
@@ -200,17 +206,7 @@ var successSum float64 = 0
 var lastCouple = []float64{}
 var lastCoupleSum float64 = 0
 var lastCoupleLength = 10000
-
-func strToArray(str string) []float64 {
-
-	wordToArray := []float64{}
-
-	for i := 0; i < len(str)-1; i++ {
-		wordToArray = append(wordToArray, float64([]rune(str)[i]))
-	}
-
-	return wordToArray
-}
+var lastCoupleRight = []bool{}
 
 func createData(n int) {
 	fmt.Println("creating ramdom datasets... (", n, ")")
@@ -281,7 +277,7 @@ func main() {
 
 	randomize()
 
-	learn(0.05)
+	learn(0.1)
 
 	fmt.Println("making predictions...\n")
 	time.Sleep(2 * time.Second)
@@ -307,13 +303,18 @@ func main() {
 
 	black := color.RGBA{0, 0, 0, 0xff}
 	cyan := color.RGBA{100, 200, 200, 0xff}
+	red := color.RGBA{255, 0, 0, 0xff}
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
 			switch {
 			case x < len(lastCouple):
 				if y == int(3*lastCouple[x]) {
-					img.Set(x, height-y, cyan)
+					if lastCoupleRight[x] {
+						img.Set(x, height-y, cyan)
+					} else {
+						img.Set(x, height-y, red)
+					}
 				} else {
 					img.Set(x, height-y, black)
 				}
