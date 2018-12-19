@@ -2,8 +2,12 @@ package main
 
 import (
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -85,7 +89,7 @@ func status(d int) {
 	var max float64 = 0
 	var ind int = 0
 	var wrongSum float64 = 0
-	last100Sum = 0
+	lastCoupleSum = 0
 	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
 		if max < nodes[len(nodes)-1][p] {
 			max = nodes[len(nodes)-1][p]
@@ -105,8 +109,8 @@ func status(d int) {
 		}
 	}
 	wrongSum /= float64(len(nodes[len(nodes)-1]) - 1)
-	for p := 0; p < len(last100); p++ {
-		last100Sum += last100[p]
+	for p := 0; p < len(lastCouple); p++ {
+		lastCoupleSum += lastCouple[p]
 	}
 
 	if ind == indc {
@@ -118,25 +122,25 @@ func status(d int) {
 		fmt.Print(d, " / ", len(dataset)-1, ": " /* dataset[d][0], "		-> ",*/, predictions[ind], "	(wrong!)" /*	 nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
 	}
 	if sum > 100 {
-		fmt.Print(" ", 100, "%	", int(last100Sum/100))
-		if len(last100) < 100 {
-			last100 = append(last100, 100)
+		fmt.Print(" ", 100, "%	", int(lastCoupleSum/float64(len(lastCouple))))
+		if len(lastCouple) < lastCoupleLength {
+			lastCouple = append(lastCouple, 100)
 		} else {
-			for i := 1; i < len(last100)-1; i++ {
-				last100[i] = last100[i+1]
+			for i := 1; i < len(lastCouple)-1; i++ {
+				lastCouple[i] = lastCouple[i+1]
 			}
-			last100[99] = 100
+			lastCouple[len(lastCouple)-1] = 100
 		}
 	} else {
-		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(last100Sum/100))
-		if len(last100) < 100 {
-			last100 = append(last100, (nodes[len(nodes)-1][ind]-wrongSum)*100)
+		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(lastCoupleSum/float64(len(lastCouple))))
+		if len(lastCouple) < lastCoupleLength {
+			lastCouple = append(lastCouple, (nodes[len(nodes)-1][ind]-wrongSum)*100)
 			confidenceSum += 100
 		} else {
-			for i := 1; i < len(last100)-1; i++ {
-				last100[i] = last100[i+1]
+			for i := 1; i < len(lastCouple)-1; i++ {
+				lastCouple[i] = lastCouple[i+1]
 			}
-			last100[99] = (nodes[len(nodes)-1][ind] - wrongSum) * 100
+			lastCouple[len(lastCouple)-1] = (nodes[len(nodes)-1][ind] - wrongSum) * 100
 			confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 		}
 	}
@@ -183,7 +187,7 @@ func backward(lr float64) {
 	}
 }
 
-var layers = []int{3, 8, 2} //------------------------------------------------------ layout (!)
+var layers = []int{3, 5, 2} //------------------------------------------------------ layout (!)
 var weights = [][][]float64{{{}}}
 var nodes = [][]float64{{}}
 var errors = [][]float64{{}}
@@ -193,8 +197,9 @@ var predictions = [4]string{} //------------------------------------------------
 var confidenceSum float64 = 0
 var successSum float64 = 0
 
-var last100 = []float64{}
-var last100Sum float64 = 0
+var lastCouple = []float64{}
+var lastCoupleSum float64 = 0
+var lastCoupleLength = 10000
 
 func strToArray(str string) []float64 {
 
@@ -216,8 +221,8 @@ func createData(n int) {
 		rand.Seed(time.Now().UTC().UnixNano() + int64(l))
 		var o = []float64{}
 
-		var a float64 = float64(rand.Intn(32))
-		var b float64 = float64(rand.Intn(32))
+		var a float64 = float64(rand.Intn(16))
+		var b float64 = float64(rand.Intn(16))
 		var c float64 = 0
 
 		if l%2 == 0 {
@@ -249,16 +254,26 @@ func learn(lr float64) {
 
 	fmt.Println("learning...")
 
+	f := 0
 	for d := 0; d < len(dataset); d++ {
 		forward(d)
 		status(d)
 		backward(lr)
-		if last100Sum/100 > 95 {
+		if lastCoupleSum/float64(len(lastCouple)) > 95 {
+			fmt.Println("\nlearning session (", d, ") successful\n")
 			break
+		} else if d == len(dataset)-1 {
+			fmt.Println("\nlearning session (", len(dataset), ") successful\n")
+		} else if lastCoupleSum/float64(len(lastCouple)) < 20 && d > len(dataset)/5 {
+			randomize()
+			d = 0
+			if f != 3 {
+				f++
+			} else {
+				break
+			}
 		}
 	}
-
-	fmt.Println("\nlearning session (", len(dataset), ") successful\n")
 
 }
 
@@ -281,4 +296,33 @@ func main() {
 		status(p)
 	}
 	fmt.Println("\nOverall confidence: 	", confidenceSum/float64(amt), "%	 Success rate:	", successSum/float64(amt)*100, "%		Score:	", int(confidenceSum/float64(amt)*(successSum/float64(amt)*100)), "\n")
+
+	width := lastCoupleLength
+	height := 500
+
+	upLeft := image.Point{0, 0}
+	lowRight := image.Point{width, height}
+
+	img := image.NewRGBA(image.Rectangle{upLeft, lowRight})
+
+	black := color.RGBA{0, 0, 0, 0xff}
+	cyan := color.RGBA{100, 200, 200, 0xff}
+
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			switch {
+			case x < len(lastCouple):
+				if y == int(3*lastCouple[x]) {
+					img.Set(x, height-y, cyan)
+				} else {
+					img.Set(x, height-y, black)
+				}
+			default:
+				img.Set(x, y, black)
+			}
+		}
+	}
+	f, _ := os.Create("result_0_1.png")
+	png.Encode(f, img)
+
 }
