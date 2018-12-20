@@ -109,7 +109,7 @@ func status(d int) {
 		}
 	}
 	wrongSum /= float64(len(nodes[len(nodes)-1]) - 1)
-	for p := 0; p < lastCoupleThreshholdAmt; p++ {
+	for p := 0; p < int(math.Min(float64(lastCoupleLength), float64(len(lastCouple)))); p++ {
 		lastCoupleSum += lastCouple[p]
 	}
 
@@ -122,7 +122,7 @@ func status(d int) {
 		fmt.Print(d, " / ", len(dataset)-1, ": " /* dataset[d][0], "		-> ",*/, predictions[ind], "	(wrong!)" /*	 nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
 	}
 	if sum > 100 {
-		fmt.Print(" ", 100, "%	", int(lastCoupleSum/float64(lastCoupleThreshholdAmt)))
+		fmt.Print(" ", 100, "%	", int(lastCoupleSum/math.Min(float64(lastCoupleLength), float64(len(lastCouple)))))
 		if len(lastCouple) < lastCoupleLength {
 			lastCouple = append(lastCouple, 100)
 			lastCoupleRight = append(lastCoupleRight, ind == indc)
@@ -134,12 +134,13 @@ func status(d int) {
 			lastCouple[len(lastCouple)-1] = 100
 			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
 		}
+
+		confidenceSum += 100
 	} else {
-		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(lastCoupleSum/float64(lastCoupleThreshholdAmt)))
+		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(lastCoupleSum/math.Min(float64(lastCoupleLength), float64(len(lastCouple)))))
 		if len(lastCouple) < lastCoupleLength {
 			lastCouple = append(lastCouple, (nodes[len(nodes)-1][ind]-wrongSum)*100)
 			lastCoupleRight = append(lastCoupleRight, ind == indc)
-			confidenceSum += 100
 		} else {
 			for i := 1; i < len(lastCouple)-1; i++ {
 				lastCouple[i] = lastCouple[i+1]
@@ -147,8 +148,8 @@ func status(d int) {
 			}
 			lastCouple[len(lastCouple)-1] = (nodes[len(nodes)-1][ind] - wrongSum) * 100
 			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
-			confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 		}
+		confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 	}
 	fmt.Print("	", dataset[d][0], "\n")
 
@@ -193,7 +194,7 @@ func backward(lr float64) {
 	}
 }
 
-var layers = []int{3, 4, 2} //------------------------------------------------------ layout (!)
+var layers = []int{3, 5, 2} //------------------------------------------------------ layout (!)
 var weights = [][][]float64{{{}}}
 var nodes = [][]float64{{}}
 var errors = [][]float64{{}}
@@ -205,9 +206,10 @@ var successSum float64 = 0
 
 var lastCouple = []float64{}
 var lastCoupleSum float64 = 0
-var lastCoupleLength = 100000
+
+var lastCoupleLength = 50000
 var lastCoupleRight = []bool{}
-var lastCoupleThreshholdAmt int = 30000
+
 var lastCoupleThreshhold float64 = 97
 
 func createData(n int) {
@@ -248,7 +250,7 @@ func createData(n int) {
 }
 
 func learn(lr float64) {
-	createData(100000) //------------------------------------------------------------------- datasets (learning)
+	createData(50000) //------------------------------------------------------------------- datasets (learning)
 
 	fmt.Println("learning...")
 
@@ -257,12 +259,12 @@ func learn(lr float64) {
 		forward(d)
 		status(d)
 		backward(lr)
-		if lastCoupleSum/float64(lastCoupleThreshholdAmt) > lastCoupleThreshhold {
+		if lastCoupleSum/math.Min(float64(lastCoupleLength), float64(len(lastCouple))) > lastCoupleThreshhold {
 			fmt.Println("\nlearning session (", d, ") successful\n")
 			break
 		} else if d == len(dataset)-1 {
 			fmt.Println("\nlearning session (", len(dataset), ") successful\n")
-		} else if lastCoupleSum/float64(lastCoupleThreshholdAmt) < 20 && d > len(dataset)/5 {
+		} else if lastCoupleSum/math.Min(float64(lastCoupleLength), float64(len(lastCouple))) < 20 && d > len(dataset)/4 {
 			randomize()
 			d = 0
 			if f != 3 {
@@ -279,7 +281,7 @@ func main() {
 
 	randomize()
 
-	learn(0.2)
+	learn(0.08)
 
 	fmt.Println("making predictions...\n")
 	time.Sleep(2 * time.Second)
