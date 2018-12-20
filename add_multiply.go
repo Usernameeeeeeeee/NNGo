@@ -109,7 +109,7 @@ func status(d int) {
 		}
 	}
 	wrongSum /= float64(len(nodes[len(nodes)-1]) - 1)
-	for p := 0; p < len(lastCouple); p++ {
+	for p := 0; p < lastCoupleThreshholdAmt; p++ {
 		lastCoupleSum += lastCouple[p]
 	}
 
@@ -122,7 +122,7 @@ func status(d int) {
 		fmt.Print(d, " / ", len(dataset)-1, ": " /* dataset[d][0], "		-> ",*/, predictions[ind], "	(wrong!)" /*	 nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
 	}
 	if sum > 100 {
-		fmt.Print(" ", 100, "%	", int(lastCoupleSum/float64(len(lastCouple))))
+		fmt.Print(" ", 100, "%	", int(lastCoupleSum/float64(lastCoupleThreshholdAmt)))
 		if len(lastCouple) < lastCoupleLength {
 			lastCouple = append(lastCouple, 100)
 			lastCoupleRight = append(lastCoupleRight, ind == indc)
@@ -135,7 +135,7 @@ func status(d int) {
 			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
 		}
 	} else {
-		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(lastCoupleSum/float64(len(lastCouple))))
+		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(lastCoupleSum/float64(lastCoupleThreshholdAmt)))
 		if len(lastCouple) < lastCoupleLength {
 			lastCouple = append(lastCouple, (nodes[len(nodes)-1][ind]-wrongSum)*100)
 			lastCoupleRight = append(lastCoupleRight, ind == indc)
@@ -150,7 +150,7 @@ func status(d int) {
 			confidenceSum += (nodes[len(nodes)-1][ind] - wrongSum) * 100
 		}
 	}
-	fmt.Print("	Data: ", dataset[d][0], "\n")
+	fmt.Print("	", dataset[d][0], "\n")
 
 }
 
@@ -193,7 +193,7 @@ func backward(lr float64) {
 	}
 }
 
-var layers = []int{3, 5, 2} //------------------------------------------------------ layout (!)
+var layers = []int{3, 4, 2} //------------------------------------------------------ layout (!)
 var weights = [][][]float64{{{}}}
 var nodes = [][]float64{{}}
 var errors = [][]float64{{}}
@@ -205,8 +205,10 @@ var successSum float64 = 0
 
 var lastCouple = []float64{}
 var lastCoupleSum float64 = 0
-var lastCoupleLength = 10000
+var lastCoupleLength = 100000
 var lastCoupleRight = []bool{}
+var lastCoupleThreshholdAmt int = 30000
+var lastCoupleThreshhold float64 = 97
 
 func createData(n int) {
 	fmt.Println("creating ramdom datasets... (", n, ")")
@@ -246,7 +248,7 @@ func createData(n int) {
 }
 
 func learn(lr float64) {
-	createData(1000000) //------------------------------------------------------------------- datasets (learning)
+	createData(100000) //------------------------------------------------------------------- datasets (learning)
 
 	fmt.Println("learning...")
 
@@ -255,12 +257,12 @@ func learn(lr float64) {
 		forward(d)
 		status(d)
 		backward(lr)
-		if lastCoupleSum/float64(len(lastCouple)) > 95 {
+		if lastCoupleSum/float64(lastCoupleThreshholdAmt) > lastCoupleThreshhold {
 			fmt.Println("\nlearning session (", d, ") successful\n")
 			break
 		} else if d == len(dataset)-1 {
 			fmt.Println("\nlearning session (", len(dataset), ") successful\n")
-		} else if lastCoupleSum/float64(len(lastCouple)) < 20 && d > len(dataset)/5 {
+		} else if lastCoupleSum/float64(lastCoupleThreshholdAmt) < 20 && d > len(dataset)/5 {
 			randomize()
 			d = 0
 			if f != 3 {
@@ -277,7 +279,7 @@ func main() {
 
 	randomize()
 
-	learn(0.1)
+	learn(0.2)
 
 	fmt.Println("making predictions...\n")
 	time.Sleep(2 * time.Second)
@@ -301,7 +303,7 @@ func main() {
 
 	img := image.NewRGBA(image.Rectangle{upLeft, lowRight})
 
-	black := color.RGBA{0, 0, 0, 0xff}
+	black := color.RGBA{10, 10, 10, 0xff}
 	cyan := color.RGBA{100, 200, 200, 0xff}
 	red := color.RGBA{255, 0, 0, 0xff}
 
@@ -323,7 +325,7 @@ func main() {
 			}
 		}
 	}
-	f, _ := os.Create("result_0_1.png")
+	f, _ := os.Create("result_0_3.png")
 	png.Encode(f, img)
 
 }
