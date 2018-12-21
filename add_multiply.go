@@ -304,8 +304,6 @@ var runConfidenceThreshhold float64 = 97 // learning done hitting 97%
 var runSuccess = []float64{}
 var runSuccessAverage = []float64{}
 
-var weightHistory = [][][][]float64{{{{}}}}
-
 var picWidth = datasets
 
 func main() {
@@ -327,7 +325,7 @@ func main() {
 		status(p)
 	}
 
-	fmt.Println("\nOverall confidence: 	", average(endConfidence)*100, "%	 Success rate:	", average(endSuccess)*100, "%		Score:	", int(average(endConfidence)*(average(endSuccess)*10000)), "\n")
+	fmt.Println("\nOverall confidence: 	", average(endConfidence)*100, "%	 Success rate:	", average(endSuccess)*100, "%		Score:	", int(average(endConfidence)*(average(endSuccess)*10000)), "\n\n", "producing image...\n")
 
 	height := 500
 	width := int(math.Min(float64(picWidth), float64(len(runConfidence))))
@@ -341,7 +339,6 @@ func main() {
 	cyan := color.RGBA{100, 200, 200, 0xff}
 	red := color.RGBA{255, 0, 0, 0xff}
 	gray := color.RGBA{70, 70, 70, 0xff}
-	darkg := color.RGBA{35, 35, 35, 0xff}
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
@@ -356,19 +353,10 @@ func main() {
 				} else if y == int(3*runConfidenceAverage[x]*runSuccessAverage[x]) {
 					img.Set(x, height-y, gray)
 				} else {
-					for i := 0; i < len(weights); i++ {
-						for j := 0; j < len(weights[i]); j++ {
-							for k := 0; k < len(weights[i][j]); k++ {
-								if y == int(250+weights[i][j][k]*50) {
-									img.Set(x, height-y, darkg)
-								}
-							}
-						}
-					}
 					img.Set(x, height-y, black)
 				}
 			default:
-				img.Set(x, y, black)
+				img.Set(x, height-y, black)
 			}
 		}
 	}
@@ -386,7 +374,5 @@ func main() {
 	if err := f.Close(); err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(weights)
 
 }
