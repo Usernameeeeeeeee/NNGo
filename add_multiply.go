@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -77,81 +78,6 @@ func calcErrors(d int) {
 
 }
 
-func status(d int) {
-	var sum float64 = 0
-
-	for e := 0; e < len(nodes[len(nodes)-1]); e++ {
-		for i := 0; i < len(nodes[len(nodes)-1]); i++ {
-			sum += math.Abs(nodes[len(nodes)-1][e]-nodes[len(nodes)-1][i]) / float64(len(nodes[len(nodes)-1])) * 100
-		}
-	}
-
-	var max float64 = 0
-	var ind int = 0
-	var avgNodeDifference float64 = 0
-	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
-		if max < nodes[len(nodes)-1][p] {
-			max = nodes[len(nodes)-1][p]
-			ind = p
-		}
-	}
-	var indc int = 0
-	for p := 0; p < len(dataset[d][1]); p++ {
-		if 1 == dataset[d][1][p] {
-			indc = p
-			break
-		}
-	}
-	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
-		if p != ind {
-			avgNodeDifference += nodes[len(nodes)-1][p]
-		}
-	}
-	avgNodeDifference /= float64(len(nodes[len(nodes)-1]) - 1)
-
-	if ind == indc {
-		fmt.Print(d, " / ", len(dataset)-1, ": " /*dataset[d][0], "		-> ",*/, predictions[ind], "	(correct!)" /* nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
-
-		endSuccess = append(endSuccess, 1)
-	} else {
-
-		fmt.Print(d, " / ", len(dataset)-1, ": " /* dataset[d][0], "		-> ",*/, predictions[ind], "	(wrong!)" /*	 nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
-		endSuccess = append(endSuccess, 0)
-	}
-	if sum > 100 {
-		fmt.Print(" ", 100, "%	", int(average(lastCouple)))
-		if len(lastCouple) < lastCoupleLength {
-			lastCouple = append(lastCouple, 100)
-			lastCoupleRight = append(lastCoupleRight, ind == indc)
-		} else {
-			for i := 1; i < len(lastCouple)-1; i++ {
-				lastCouple[i] = lastCouple[i+1]
-				lastCoupleRight[i] = lastCoupleRight[i+1]
-			}
-			lastCouple[len(lastCouple)-1] = 100
-			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
-		}
-
-		endConfidence = append(endConfidence, 1)
-	} else {
-		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-avgNodeDifference)*100), "%	", int(average(lastCouple)))
-		if len(lastCouple) < lastCoupleLength {
-			lastCouple = append(lastCouple, (nodes[len(nodes)-1][ind]-avgNodeDifference)*100)
-			lastCoupleRight = append(lastCoupleRight, ind == indc)
-		} else {
-			for i := 1; i < len(lastCouple)-1; i++ {
-				lastCouple[i] = lastCouple[i+1]
-				lastCoupleRight[i] = lastCoupleRight[i+1]
-			}
-			lastCouple[len(lastCouple)-1] = (nodes[len(nodes)-1][ind] - avgNodeDifference) * 100
-			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
-		}
-		endConfidence = append(endConfidence, (nodes[len(nodes)-1][ind] - avgNodeDifference))
-	}
-	fmt.Print("	", dataset[d][0], "\n")
-
-}
-
 func forward(d int) {
 	nodes = [][]float64{{}}
 	nodes[0] = append(nodes[0], dataset[d][0]...)
@@ -191,30 +117,102 @@ func backward(lr float64) {
 	}
 }
 
-func average(arr []float64) float64 {
-	var arrSum float64 = 0
-	for p := 0; p < len(arr); p++ {
-		arrSum += arr[p]
+func status(d int) {
+	var sum float64 = 0
+
+	for e := 0; e < len(nodes[len(nodes)-1]); e++ {
+		for i := 0; i < len(nodes[len(nodes)-1]); i++ {
+			sum += math.Abs(nodes[len(nodes)-1][e]-nodes[len(nodes)-1][i]) / float64(len(nodes[len(nodes)-1])) * 100
+		}
 	}
-	return arrSum / float64(len(arr))
+
+	var max float64 = 0
+	var ind int = 0
+	var avgNodeDifference float64 = 0
+	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
+		if max < nodes[len(nodes)-1][p] {
+			max = nodes[len(nodes)-1][p]
+			ind = p
+		}
+	}
+	var indc int = 0
+	for p := 0; p < len(dataset[d][1]); p++ {
+		if 1 == dataset[d][1][p] {
+			indc = p
+			break
+		}
+	}
+	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
+		if p != ind {
+			avgNodeDifference += nodes[len(nodes)-1][p]
+		}
+	}
+	avgNodeDifference /= float64(len(nodes[len(nodes)-1]) - 1)
+
+	if ind == indc {
+		fmt.Print(d, " / ", len(dataset)-1, ": " /*dataset[d][0], "		-> ",*/, predictions[ind], "	correct!" /* nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/)
+
+		endSuccess = append(endSuccess, 1)
+		runSuccess = append(runSuccess, 1)
+	} else {
+
+		fmt.Print(d, " / ", len(dataset)-1, ": " /* dataset[d][0], "		-> ",*/, predictions[ind], "	wrong!	" /*	 nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/)
+		endSuccess = append(endSuccess, 0)
+		runSuccess = append(runSuccess, 0)
+	}
+	if sum > 100 {
+		if len(runConfidence) < picWidth {
+			runConfidence = append(runConfidence, 100)
+		} else {
+			for i := 1; i < len(runConfidence)-1; i++ {
+				runConfidence[i] = runConfidence[i+1]
+				runSuccess[i] = runSuccess[i+1]
+			}
+			runConfidence[len(runConfidence)-1] = 100
+		}
+
+		endConfidence = append(endConfidence, 1)
+
+		runConfidenceAverage = append(runConfidenceAverage, average(runConfidence, int64(runConfidenceLength)))
+		runSuccessAverage = append(runSuccessAverage, average(runSuccess, int64(runConfidenceLength)))
+
+		fmt.Print("	", int(runConfidence[int(math.Min(float64(d), float64(picWidth-1)))]), "%	", int(runConfidenceAverage[int(math.Min(float64(d), float64(picWidth-1)))]))
+
+	} else {
+		if len(runConfidence) < picWidth {
+			runConfidence = append(runConfidence, (nodes[len(nodes)-1][ind]-avgNodeDifference)*100)
+		} else {
+			for i := 1; i < len(runConfidence)-1; i++ {
+				runConfidence[i] = runConfidence[i+1]
+				runSuccess[i] = runSuccess[i+1]
+			}
+			runConfidence[len(runConfidence)-1] = (nodes[len(nodes)-1][ind] - avgNodeDifference) * 100
+		}
+		endConfidence = append(endConfidence, (nodes[len(nodes)-1][ind] - avgNodeDifference))
+
+		runConfidenceAverage = append(runConfidenceAverage, average(runConfidence, int64(runConfidenceLength)))
+		runSuccessAverage = append(runSuccessAverage, average(runSuccess, int64(runConfidenceLength)))
+
+		fmt.Print("	", int(runConfidence[int(math.Min(float64(d), float64(picWidth-1)))]), "%	", int(runConfidenceAverage[int(math.Min(float64(d), float64(picWidth-1)))]))
+	}
+
+	fmt.Print("	", dataset[d][0], "\n")
+
 }
 
-var layers = []int{3, 5, 2} //------------------------------------------------------ layout (!)
-var weights = [][][]float64{{{}}}
-var nodes = [][]float64{{}}
-var errors = [][]float64{{}}
-var dataset = [][][]float64{{{}}}
-var predictions = [4]string{} //------------------------------------------------------------ how many logical outputs
-
-var endConfidence = []float64{}
-var endSuccess = []float64{}
-
-var lastCouple = []float64{}
-
-var lastCoupleLength = 50000
-var lastCoupleRight = []bool{}
-
-var lastCoupleThreshhold float64 = 97
+func average(arr []float64, params ...int64) float64 {
+	var maxBack int64
+	if len(params) != 0 {
+		maxBack = params[0]
+	} else {
+		maxBack = int64(len(arr))
+	}
+	var arrSum float64 = 0
+	for p := 0; p < int(math.Min(float64(len(arr)), float64(maxBack))); p++ {
+		arrSum += arr[len(arr)-1-p]
+	}
+	return arrSum / math.Min(float64(len(arr)), float64(maxBack))
+}
 
 func createData(n int) {
 	fmt.Println("creating ramdom datasets... (", n, ")")
@@ -254,7 +252,7 @@ func createData(n int) {
 }
 
 func learn(lr float64) {
-	createData(100000) //------------------------------------------------------------------- datasets (learning)
+	createData(datasets) //------------------------------------------------------------------- datasets (learning)
 
 	fmt.Println("learning...")
 
@@ -263,12 +261,12 @@ func learn(lr float64) {
 		forward(d)
 		status(d)
 		backward(lr)
-		if average(lastCouple) > lastCoupleThreshhold && d > len(dataset)/4 {
+		if average(runConfidence, int64(runConfidenceLength)) > runConfidenceThreshhold && d > len(dataset)/4 {
 			fmt.Println("\nlearning session (", d, ") successful\n")
 			break
 		} else if d == len(dataset)-1 {
 			fmt.Println("\nlearning session (", len(dataset), ") successful\n")
-		} else if average(lastCouple) < 20 && d > len(dataset)/4 {
+		} else if average(runConfidence, int64(runConfidenceLength)) < 20 && d > len(dataset)/4 {
 			randomize()
 			d = 0
 			if f != 3 {
@@ -281,11 +279,40 @@ func learn(lr float64) {
 
 }
 
+func filename() string {
+	name := "result_" + time.Now().Format("2-Jan-2006_15-04-05") + ".png"
+	return name
+}
+
+var layers = []int{3, 5, 2}       //------------------------------------------------------ layout (!)
+var weights = [][][]float64{{{}}} // weights[layer_left][node_in_layer_left][node_in_layer_right]
+var nodes = [][]float64{{}}
+var errors = [][]float64{{}}
+var dataset = [][][]float64{{{}}}
+var predictions = [2]string{} //------------------------------------------------------------ how many logical outputs
+
+var datasets = 100000
+
+var endConfidence = []float64{}
+var endSuccess = []float64{}
+
+var runConfidenceAverage = []float64{}
+var runConfidence = []float64{}
+var runConfidenceLength = 10000          // 97% will be based on this number of previous confidence results
+var runConfidenceThreshhold float64 = 97 // learning done hitting 97%
+
+var runSuccess = []float64{}
+var runSuccessAverage = []float64{}
+
+var weightHistory = [][][][]float64{{{{}}}}
+
+var picWidth = datasets
+
 func main() {
 
 	randomize()
 
-	learn(0.08)
+	learn(0.05)
 
 	fmt.Println("making predictions...\n")
 	time.Sleep(2 * time.Second)
@@ -299,10 +326,11 @@ func main() {
 		forward(p)
 		status(p)
 	}
-	fmt.Println("\nOverall confidence: 	", average(endConfidence)*100, "%	 Success rate:	", average(endSuccess)*100, "%		Score:	", int(average(endConfidence)*(average(endSuccess)*100)), "\n", endConfidence)
 
-	width := lastCoupleLength
+	fmt.Println("\nOverall confidence: 	", average(endConfidence)*100, "%	 Success rate:	", average(endSuccess)*100, "%		Score:	", int(average(endConfidence)*(average(endSuccess)*10000)), "\n")
+
 	height := 500
+	width := int(math.Min(float64(picWidth), float64(len(runConfidence))))
 
 	upLeft := image.Point{0, 0}
 	lowRight := image.Point{width, height}
@@ -312,18 +340,31 @@ func main() {
 	black := color.RGBA{10, 10, 10, 0xff}
 	cyan := color.RGBA{100, 200, 200, 0xff}
 	red := color.RGBA{255, 0, 0, 0xff}
+	gray := color.RGBA{70, 70, 70, 0xff}
+	darkg := color.RGBA{35, 35, 35, 0xff}
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
 			switch {
-			case x < len(lastCouple):
-				if y == int(3*lastCouple[x]) {
-					if lastCoupleRight[x] {
+			case x < len(runConfidence):
+				if y == int(3*runConfidence[x]) {
+					if runSuccess[x] == 1 {
 						img.Set(x, height-y, cyan)
 					} else {
 						img.Set(x, height-y, red)
 					}
+				} else if y == int(3*runConfidenceAverage[x]*runSuccessAverage[x]) {
+					img.Set(x, height-y, gray)
 				} else {
+					for i := 0; i < len(weights); i++ {
+						for j := 0; j < len(weights[i]); j++ {
+							for k := 0; k < len(weights[i][j]); k++ {
+								if y == int(250+weights[i][j][k]*50) {
+									img.Set(x, height-y, darkg)
+								}
+							}
+						}
+					}
 					img.Set(x, height-y, black)
 				}
 			default:
@@ -331,7 +372,21 @@ func main() {
 			}
 		}
 	}
-	f, _ := os.Create("result_0_3.png")
+	f, err := os.Create(filename())
 	png.Encode(f, img)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := png.Encode(f, img); err != nil {
+		f.Close()
+		log.Fatal(err)
+	}
+
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(weights)
 
 }
