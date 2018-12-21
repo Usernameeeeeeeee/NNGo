@@ -107,6 +107,7 @@ func forward(d int) {
 }
 
 func backward(lr float64) {
+	weightHistory = append(weightHistory, weights)
 	newWeights := weights
 	for ri := 0; ri < len(layers)-1; ri++ {
 		for h := 0; h < layers[ri+1]; h++ {
@@ -252,12 +253,12 @@ func createData(n int) {
 }
 
 func learn(lr float64) {
-	createData(datasets) //------------------------------------------------------------------- datasets (learning)
+	createData(datasets + amt) //------------------------------------------------------------------- datasets (learning)
 
 	fmt.Println("learning...")
 
 	f := 0
-	for d := 0; d < len(dataset); d++ {
+	for d := 0; d < len(dataset)-amt; d++ {
 		forward(d)
 		status(d)
 		backward(lr)
@@ -267,9 +268,17 @@ func learn(lr float64) {
 		} else if d == len(dataset)-1 {
 			fmt.Println("\nlearning session (", len(dataset), ") successful\n")
 		} else if average(runConfidence, int64(runConfidenceLength)) < 20 && d > len(dataset)/4 {
-			randomize()
-			d = 0
 			if f != 3 {
+				randomize()
+				runSuccess = []float64{}
+				runSuccessAverage = []float64{}
+				weightHistory = [][][][]float64{{{{}}}}
+				endConfidence = []float64{}
+				endSuccess = []float64{}
+				runConfidenceAverage = []float64{}
+				runConfidence = []float64{}
+
+				d = -1
 				f++
 			} else {
 				break
@@ -291,7 +300,8 @@ var errors = [][]float64{{}}
 var dataset = [][][]float64{{{}}}
 var predictions = [2]string{} //------------------------------------------------------------ how many logical outputs
 
-var datasets = 100000
+var datasets = 10000
+var amt int = 100
 
 var endConfidence = []float64{}
 var endSuccess = []float64{}
@@ -304,6 +314,8 @@ var runConfidenceThreshhold float64 = 97 // learning done hitting 97%
 var runSuccess = []float64{}
 var runSuccessAverage = []float64{}
 
+var weightHistory = [][][][]float64{{{{}}}}
+
 var picWidth = datasets
 
 func main() {
@@ -315,12 +327,9 @@ func main() {
 	fmt.Println("making predictions...\n")
 	time.Sleep(2 * time.Second)
 
-	var amt int = 100
-
-	createData(amt) //------------------------------------------------------------------------ dataset (show)
 	endConfidence = []float64{}
 	endSuccess = []float64{}
-	for p := 0; p < amt; p++ {
+	for p := datasets; p < datasets+amt; p++ {
 		forward(p)
 		status(p)
 	}
@@ -339,20 +348,40 @@ func main() {
 	cyan := color.RGBA{100, 200, 200, 0xff}
 	red := color.RGBA{255, 0, 0, 0xff}
 	gray := color.RGBA{70, 70, 70, 0xff}
+	darkg := color.RGBA{30, 30, 30, 0xff}
+
+	occupied := false
+	weightHistory[0] = weightHistory[1]
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
+			occupied = false
 			switch {
 			case x < len(runConfidence):
 				if y == int(3*runConfidence[x]) {
 					if runSuccess[x] == 1 {
 						img.Set(x, height-y, cyan)
+						occupied = true
 					} else {
 						img.Set(x, height-y, red)
+						occupied = true
 					}
 				} else if y == int(3*runConfidenceAverage[x]*runSuccessAverage[x]) {
 					img.Set(x, height-y, gray)
+					occupied = true
 				} else {
+					for i := 0; i < len(weightHistory[x]); i++ {
+						for j := 0; j < len(weightHistory[x][i]); j++ {
+							for k := 0; k < len(weightHistory[x][i][j]); k++ {
+								if y == int(250+math.Pow(weightHistory[x][i][j][k], 3)) && !occupied {
+									img.Set(x, height-y, darkg)
+									occupied = true
+								}
+							}
+						}
+					}
+				}
+				if !occupied {
 					img.Set(x, height-y, black)
 				}
 			default:
@@ -374,5 +403,4 @@ func main() {
 	if err := f.Close(); err != nil {
 		log.Fatal(err)
 	}
-
 }
