@@ -88,8 +88,7 @@ func status(d int) {
 
 	var max float64 = 0
 	var ind int = 0
-	var wrongSum float64 = 0
-	lastCoupleSum = 0
+	var avgNodeDifference float64 = 0
 	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
 		if max < nodes[len(nodes)-1][p] {
 			max = nodes[len(nodes)-1][p]
@@ -105,13 +104,10 @@ func status(d int) {
 	}
 	for p := 0; p < len(nodes[len(nodes)-1]); p++ {
 		if p != ind {
-			wrongSum += nodes[len(nodes)-1][p]
+			avgNodeDifference += nodes[len(nodes)-1][p]
 		}
 	}
-	wrongSum /= float64(len(nodes[len(nodes)-1]) - 1)
-	for p := 0; p < int(math.Min(float64(lastCoupleLength), float64(len(lastCouple)))); p++ {
-		lastCoupleSum += lastCouple[p]
-	}
+	avgNodeDifference /= float64(len(nodes[len(nodes)-1]) - 1)
 
 	if ind == indc {
 		fmt.Print(d, " / ", len(dataset)-1, ": " /*dataset[d][0], "		-> ",*/, predictions[ind], "	(correct!)" /* nodes[len(nodes)-1], "	(", dataset[d][1], ") 	*/, "	Confidence: ")
@@ -138,19 +134,19 @@ func status(d int) {
 
 		endConfidence = append(endConfidence, 1)
 	} else {
-		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-wrongSum)*100), "%	", int(average(lastCouple)))
+		fmt.Print(" ", int((nodes[len(nodes)-1][ind]-avgNodeDifference)*100), "%	", int(average(lastCouple)))
 		if len(lastCouple) < lastCoupleLength {
-			lastCouple = append(lastCouple, (nodes[len(nodes)-1][ind]-wrongSum)*100)
+			lastCouple = append(lastCouple, (nodes[len(nodes)-1][ind]-avgNodeDifference)*100)
 			lastCoupleRight = append(lastCoupleRight, ind == indc)
 		} else {
 			for i := 1; i < len(lastCouple)-1; i++ {
 				lastCouple[i] = lastCouple[i+1]
 				lastCoupleRight[i] = lastCoupleRight[i+1]
 			}
-			lastCouple[len(lastCouple)-1] = (nodes[len(nodes)-1][ind] - wrongSum) * 100
+			lastCouple[len(lastCouple)-1] = (nodes[len(nodes)-1][ind] - avgNodeDifference) * 100
 			lastCoupleRight[len(lastCoupleRight)-1] = (ind == indc)
 		}
-		endConfidence = append(endConfidence, (nodes[len(nodes)-1][ind] - wrongSum))
+		endConfidence = append(endConfidence, (nodes[len(nodes)-1][ind] - avgNodeDifference))
 	}
 	fmt.Print("	", dataset[d][0], "\n")
 
@@ -214,7 +210,6 @@ var endConfidence = []float64{}
 var endSuccess = []float64{}
 
 var lastCouple = []float64{}
-var lastCoupleSum float64 = 0
 
 var lastCoupleLength = 50000
 var lastCoupleRight = []bool{}
@@ -268,12 +263,12 @@ func learn(lr float64) {
 		forward(d)
 		status(d)
 		backward(lr)
-		if lastCoupleSum/math.Min(float64(lastCoupleLength), float64(len(lastCouple))) > lastCoupleThreshhold {
+		if average(lastCouple) > lastCoupleThreshhold && d > len(dataset)/4 {
 			fmt.Println("\nlearning session (", d, ") successful\n")
 			break
 		} else if d == len(dataset)-1 {
 			fmt.Println("\nlearning session (", len(dataset), ") successful\n")
-		} else if lastCoupleSum/math.Min(float64(lastCoupleLength), float64(len(lastCouple))) < 20 && d > len(dataset)/4 {
+		} else if average(lastCouple) < 20 && d > len(dataset)/4 {
 			randomize()
 			d = 0
 			if f != 3 {
@@ -298,13 +293,13 @@ func main() {
 	var amt int = 100
 
 	createData(amt) //------------------------------------------------------------------------ dataset (show)
-	var endConfidence = []float64{}
-	var endSuccess = []float64{}
+	endConfidence = []float64{}
+	endSuccess = []float64{}
 	for p := 0; p < amt; p++ {
 		forward(p)
 		status(p)
 	}
-	fmt.Println("\nOverall confidence: 	", average(endConfidence)*100, "%	 Success rate:	", average(endSuccess)*100, "%		Score:	", int(average(endConfidence)*(average(endSuccess)*100)), "\n")
+	fmt.Println("\nOverall confidence: 	", average(endConfidence)*100, "%	 Success rate:	", average(endSuccess)*100, "%		Score:	", int(average(endConfidence)*(average(endSuccess)*100)), "\n", endConfidence)
 
 	width := lastCoupleLength
 	height := 500
